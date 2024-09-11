@@ -1,8 +1,9 @@
 from mood_classifier import EmotionClassifier
 
+
 def main():
     # Initialize and train the classifier
-    classifier = EmotionClassifier('data.csv')
+    classifier = EmotionClassifier("data.csv")
     X_test, y_test = classifier.train_model()
 
     # Evaluate the model
@@ -17,16 +18,18 @@ def main():
     # Interactive input
     while True:
         user_entry = input("\nEnter your journal entry (or 'quit' to exit): ")
-        if user_entry.lower() == 'quit':
+        if user_entry.lower() == "quit":
             break
-        
+
         results = classifier.predict_emotions(user_entry)
         print("\nPredicted emotions for your entry:")
         display_emotions(results)
 
+
 def display_emotions(emotions):
     for emotion, percentage in emotions:
         print(f"{emotion}: {percentage:.2f}%")
+
 
 if __name__ == "__main__":
     main()
