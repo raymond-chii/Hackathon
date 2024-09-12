@@ -12,8 +12,7 @@ def main():
 
     # Example usage
     example_entry = "Today was a mix of emotions. I felt excited about my new project, but also a bit anxious about the upcoming deadline. Overall, I'm satisfied with my progress."
-    print("\nPredicted emotions for the example entry:")
-    display_emotions(classifier.predict_emotions(example_entry))
+    process_entry(classifier, example_entry)
 
     # Interactive input
     while True:
@@ -21,14 +20,30 @@ def main():
         if user_entry.lower() == "quit":
             break
 
-        results = classifier.predict_emotions(user_entry)
-        print("\nPredicted emotions for your entry:")
-        display_emotions(results)
+        process_entry(classifier, user_entry)
+
+
+def process_entry(classifier, entry):
+    emotions = classifier.predict_emotions(entry)
+    print("\nPredicted emotions for your entry:")
+    display_emotions(emotions)
+
+    color = classifier.mix_colors(emotions)
+    print(f"\nMixed color representing emotional state: {color}")
+
+    print("\nSuggested activities based on your emotions:")
+    activities = classifier.suggest_activities(emotions)
+    display_activities(activities)
 
 
 def display_emotions(emotions):
     for emotion, percentage in emotions:
         print(f"{emotion}: {percentage:.2f}%")
+
+
+def display_activities(activities):
+    for i, activity in enumerate(activities, 1):
+        print(f"{i}. {activity}")
 
 
 if __name__ == "__main__":
