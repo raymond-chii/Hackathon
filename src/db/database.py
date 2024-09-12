@@ -1,88 +1,71 @@
-import datetime
-import json
 import sqlite3
+from datetime import datetime
 
+class JournalDatabase:
+    def __init__(self, db_name='journal.db'):
+        self.conn = sqlite3.connect(db_name)
+        self.create_tables()
 
-def setup_database():
-    conn = sqlite3.connect("journal_entries.db")
-    cursor = conn.cursor()
+    def create_tables(self):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS entries (
+            id INTEGER PRIMARY KEY,
+            date TEXT,
+            entry TEXT,
+            color TEXT
+        )
+        ''')
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS emotions (
+            id INTEGER PRIMARY KEY,
+            entry_id INTEGER,
+            emotion TEXT,
+            percentage REAL,
+            FOREIGN KEY (entry_id) REFERENCES entries (id)
+        )
+        ''')
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS activities (
+            id INTEGER PRIMARY KEY,
+            entry_id INTEGER,
+            activity TEXT,
+            FOREIGN KEY (entry_id) REFERENCES entries (id)
+        )
+        ''')
+        self.conn.commit()
 
-    # Drop the existing table if it exists
-    cursor.execute("DROP TABLE IF EXISTS entries")
+    def add_entry(self, entry, emotions, color, activities):
+        cursor = self.conn.cursor()
+        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("INSERT INTO entries (date, entry, color) VALUES (?, ?, ?)",
+                       (date, entry, color))
+        entry_id = cursor.lastrowid
 
-    # Create table for journal entries with updated schema
-    cursor.execute(
-        """
-    CREATE TABLE entries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT,
-        content TEXT,
-        dominant_emotion TEXT,
-        color TEXT,
-        emotion_breakdown TEXT,
-        analysis TEXT
-    )
-    """
-    )
+        for emotion, percentage in emotions:
+            cursor.execute("INSERT INTO emotions (entry_id, emotion, percentage) VALUES (?, ?, ?)",
+                           (entry_id, emotion, percentage))
 
-    conn.commit()
-    conn.close()
+        for activity in activities:
+            cursor.execute("INSERT INTO activities (entry_id, activity) VALUES (?, ?)",
+                           (entry_id, activity))
 
+        self.conn.commit()
 
-def add_entry(content, mood_data):
-    conn = sqlite3.connect("journal_entries.db")
-    cursor = conn.cursor()
+    def get_entries(self, limit=10):
+        cursor = self.conn.cursor()
+        cursor.execute("""
+        SELECT e.id, e.date, e.entry, e.color, 
+               GROUP_CONCAT(DISTINCT em.emotion || ':' || em.percentage),
+               GROUP_CONCAT(DISTINCT a.activity)
+        FROM entries e
+        LEFT JOIN emotions em ON e.id = em.entry_id
+        LEFT JOIN activities a ON e.id = a.entry_id
+        GROUP BY e.id
+        ORDER BY e.date DESC
+        LIMIT ?
+        """, (limit,))
+        return cursor.fetchall()
 
-    date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    cursor.execute(
-        """
-    INSERT INTO entries (date, content, dominant_emotion, color, emotion_breakdown, analysis)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """,
-        (
-            date,
-            content,
-            mood_data["dominant_emotion"],
-            mood_data["color"],
-            json.dumps(mood_data["emotion_breakdown"]),
-            mood_data["analysis"],
-        ),
-    )
-
-    conn.commit()
-    conn.close()
-
-
-def view_entries():
-    conn = sqlite3.connect("journal_entries.db")
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT date, content, dominant_emotion, color, emotion_breakdown, analysis FROM entries ORDER BY date DESC"
-    )
-    entries = cursor.fetchall()
-
-    if not entries:
-        print("No entries found.")
-    else:
-        for (
-            date,
-            content,
-            dominant_emotion,
-            color,
-            emotion_breakdown,
-            analysis,
-        ) in entries:
-            print(f"\nDate: {date}")
-            print(f"Dominant Emotion: {dominant_emotion}")
-            print(f"Color: {color}")
-            print("Emotion Breakdown:")
-            for emotion, percentage in json.loads(emotion_breakdown).items():
-                print(f"  {emotion}: {percentage:.2f}%")
-            print(f"Analysis: {analysis}")
-            print("Content:")
-            print(content)
-            print("-" * 50)
-
-    conn.close()
+    def close(self):
+        self.conn.close()
