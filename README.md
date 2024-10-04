@@ -64,7 +64,3 @@ We have a 3-year roadmap for CUCU, including:
 ## 🏅 Recognition
 
 Our innovative approach and potential for significant impact earned us the second-place prize at the Pfizer 2024 Hackathon.
-
----
-
-For more information or collaboration opportunities, please contact [Your Contact Information].
